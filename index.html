@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stock</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Stock Prices Viewer</h1>
+    </header>
+    <main>
+      <label for="searchInput">Search Stock Symbol</label>
+      <input type="text" placeholder="Enter stock symbol" id="searchInput" />
+      <button onclick="searchStock()">Search</button>
+
+      <table id="stock-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Stock Symbol</th>
+            <th>Stock Price</th>
+            <th>View Last 7 days</th>
+          </tr>
+        </thead>
+        <tbody id="stock-table-body">
+          <!-- <tr>
+            <td>29th Jan 2024</td>
+            <td>AAPL</td>
+            <td>$123</td>
+            <td><button onclick="openModal()">View</button></td>
+          </tr> -->
+        </tbody>
+      </table>
+    </main>
+
+    <div class="modal" id="modal">
+      <div class="modal-content">
+        <span class="close-btn" id="close-btn">&times;</span>
+        <h2>Stock Prices for the Past 7 Days</h2>
+        <ul id="stockPricesList"></ul>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("close-btn").addEventListener("click", () => {
+        document.getElementById("modal").style.display = "none";
+      });
+      let initalStocks = ["GOOGL", "AAPL", "MSFT", "AMZN"];
+      let tableBody = document.getElementById("stock-table-body");
+      function displayInitialStocks() {
+        initalStocks.map(async function (symbol) {
+          let response = await fetch(
+            `http://localhost/stock/backend/main.php?symbol=${symbol}`
+          );
+          let data = await response.json();
+          console.log(data);
+          let tr = document.createElement("tr");
+          let date = new Date(data.timestamp * 1000).toLocaleDateString(
+            "en-US",
+            {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              hour: "numeric",
+            }
+          );
+          tr.innerHTML = `
+                <td>${date}</td>
+                    <td>${symbol}</td>
+                    <td>$${data.price}</td>
+                    <td><button onclick="openModal('${symbol}')">View</button></td>
+                `;
+
+          tableBody.appendChild(tr);
+        });
+      }
+
+      async function searchStock() {
+        let symbolSearched = document.getElementById("searchInput").value;
+        let response = await fetch(
+          `http://localhost/stock/backend/main.php?symbol=${symbolSearched}`
+        );
+        let data = await response.json();
+        console.log(data);
+        tableBody.innerHTML == "";
+        let tr = document.createElement("tr");
+        let date = new Date(data.timestamp * 1000).toLocaleDateString("en-US", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          hour: "numeric",
+        });
+        tr.innerHTML = `
+                <td>${date}</td>
+                    <td>${symbolSearched}</td>
+                    <td>$${data.price}</td>
+                    <td><button onclick="openModal()">View</button></td>
+                `;
+
+        tableBody.appendChild(tr);
+      }
+      async function openModal(symbolClicked) {
+        let historyUl = document.getElementById("stockPricesList");
+        let response = await fetch(
+          `http://localhost/stock/backend/main.php?symbol=${symbolClicked}&history=true`
+        );
+        let data = await response.json();
+        console.log(data);
+        historyUl.innerHTML = "";
+        data.map((stockData) => {
+
+          // if the date is older than 7 days don't show
+          if ((stockData.timestamp * 1000) < Date.now() - (7 * 60 * 60 * 24 * 1000)){
+            // old data show not diplaying this
+            return;
+          }
+
+          let date = new Date(stockData.timestamp * 1000).toLocaleDateString(
+            "en-US",
+            {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              hour: "numeric",
+            }
+          );
+          historyUl.innerHTML += `<li>${date} : ${symbolClicked} - ${stockData.price}</li>`;
+        });
+
+        document.getElementById("modal").style.display = "block";
+      }
+
+      displayInitialStocks();
+    </script>
+  </body>
+</html>
